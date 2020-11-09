@@ -8,7 +8,7 @@ def print_aliases():
 
     fileName = sys.argv[1] 
 
-    if fileName != ".gitconfig":
+    if not fileName.endswith(".gitconfig"):
         print(incorrectFileErrorMsg)
         return
 
