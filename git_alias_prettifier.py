@@ -1,25 +1,44 @@
 import sys
 
 def print_aliases():
+    incorrectFileErrorMsg = "Please supply the path to a .gitconfig file"
     if len(sys.argv) < 2:
-        print("Please supply the path to a .gitconfig file")
+        print(incorrectFileErrorMsg)
         return
 
-    arg = sys.argv[1] 
-    config = open(arg)
+    fileName = sys.argv[1] 
+
+    if fileName != ".gitconfig":
+        print(incorrectFileErrorMsg)
+        return
+
+    config = open(fileName)
     contents = config.read()
     result = contents.split('[alias]\n', 1)[1]
     result = result.split('[', 1)[0]
 
     lines = result.split('\n')
     del lines[-1]
+
+    outputLines = []
+    maxAliasLength = 0
     for line in lines:
         if line.startswith('#'):
-            print(f"{OutputColors.HEADER}{line}{OutputColors.END}")
+            outputLines.append((line, ""))
         else:
-            parts = line.partition('=')
-            print(f"{OutputColors.ALIAS}{parts[0]}{OutputColors.END}=", end='')
-            print(f"{OutputColors.COMMAND}{parts[2]}{OutputColors.END}")
+            lineParts = line.partition('=')
+            alias = lineParts[0].strip()
+            command = lineParts[2].strip()
+            outputLines.append((alias,command))
+            maxAliasLength = max(maxAliasLength, len(alias))
+
+    for (alias, command) in outputLines:
+        if command == "":
+            print(f"{OutputColors.HEADER}{alias}{OutputColors.END}")
+        else:
+            postAliasSpaces = ''.join([char * (maxAliasLength - len(alias) + 1) for char in " "])
+            print(f"{OutputColors.ALIAS}  {alias}{postAliasSpaces}{OutputColors.END}= ", end='')
+            print(f"{OutputColors.COMMAND}{command}{OutputColors.END}")
 
 
 class OutputColors:
