@@ -1,55 +1,35 @@
 use ansi_term::Colour::*;
-use std::{cmp, env, fs, process};
+use git2::{Config, Error};
+use std::cmp;
 
-fn main() {
-    let args: Vec<String> = env::args().collect();
+fn main() -> Result<(), Error> {
+    let global_config = Config::find_global()?;
+    let global_config = Config::open(global_config.as_path())?;
 
-    if args.len() < 2 {
-        invalid_gitconfig_file();
-    }
-
-    let filename = &args[1];
-
-    if !filename.ends_with(".gitconfig") {
-        invalid_gitconfig_file();
-    }
-
-    let contents = fs::read_to_string(filename).expect("Unable to read gitconfig");
-    let aliases_start = contents.find("[alias]").unwrap_or(0);
-    let aliases_end = contents[aliases_start + 1..]
-        .find('[')
-        .unwrap_or(contents.len());
-    let aliases: &str = &contents[aliases_start + 8..aliases_start + aliases_end];
-
-    let mut output_lines = Vec::new();
     let mut max_alias_len = 0;
-    for line in aliases.lines() {
-        if line.starts_with('#') {
-            output_lines.push((line, ""));
-        } else {
-            let line_parts: Vec<&str> = line.splitn(2, '=').collect();
-            let alias = line_parts[0].trim();
-            let command = line_parts[1].trim();
-            output_lines.push((alias, command));
-            max_alias_len = cmp::max(max_alias_len, alias.len());
-        }
+
+    let config_entries = &global_config.entries(Some("alias.*"))?;
+    for entry in config_entries {
+        let entry = entry?;
+        let alias = entry.name().unwrap()[6..].to_string();
+        max_alias_len = cmp::max(max_alias_len, alias.len());
     }
 
-    for (alias, command) in output_lines.iter() {
-        if command.is_empty() {
-            println!("{}", Red.paint(alias.to_string()));
-        } else {
-            println!(
-                "  {}{} = {}",
-                Green.paint(alias.to_string()),
-                " ".repeat(max_alias_len - alias.len()),
-                Blue.paint(command.to_string())
-            );
-        }
-    }
-}
+    println!("{}", Red.paint("Aliases:"));
 
-fn invalid_gitconfig_file() {
-    eprintln!("Please supply the path to a .gitconfig file");
-    process::exit(1);
+    let config_entries = &global_config.entries(Some("alias.*"))?;
+    for entry in config_entries {
+        let entry = entry?;
+        let alias = entry.name().unwrap()[6..].to_string();
+        let command = entry.value().unwrap().to_string();
+
+        println!(
+            "  {}{} = {}",
+            Green.paint(alias.to_string()),
+            " ".repeat(max_alias_len - alias.len()),
+            Blue.paint(command.to_string())
+        );
+    }
+
+    Ok(())
 }
